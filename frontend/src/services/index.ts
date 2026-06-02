@@ -1,5 +1,7 @@
-import { get, post } from "./api";
+import { get, post, uploadFile } from "./api";
 import { Knowledge, ChatRequest, ChatResponse } from "./types";
+
+export { uploadFile };
 
 export async function listKnowledge(page = 1, size = 10) {
   return get<{ items: Knowledge[]; total: number }>(`/knowledge?page=${page}&size=${size}`);

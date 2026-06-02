@@ -78,8 +78,13 @@ class VectorStore:
         query_embedding: list[float],
         top_k: int = 5,
     ) -> list[RetrievedChunk]:
-        """向量相似度检索"""
+        """向量相似度检索（集合不存在时返回空列表）"""
         name = self._collection_name(knowledge_id)
+
+        # 检查集合是否存在
+        collections = [c.name for c in self.client.get_collections().collections]
+        if name not in collections:
+            return []
 
         results = self.client.search(
             collection_name=name,
@@ -119,7 +124,10 @@ class VectorStore:
             self.client.delete_collection(collection_name=name)
 
     async def get_document_count(self, knowledge_id: str) -> int:
-        """获取知识库向量数量"""
+        """获取知识库向量数量（集合不存在时返回 0）"""
         name = self._collection_name(knowledge_id)
+        collections = [c.name for c in self.client.get_collections().collections]
+        if name not in collections:
+            return 0
         info = self.client.get_collection(collection_name=name)
         return info.points_count or 0

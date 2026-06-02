@@ -10,7 +10,6 @@ from app.dependencies import get_metadata_db, get_vector_store, get_llm, get_emb
 from app.storage.metadata_db import MetadataDB
 from app.storage.vector_store import VectorStore
 from app.providers.llm import LLMProvider
-from app.providers.embedding import QwenEmbedding
 from app.services.retrieval.retriever import Retriever
 from app.services.chat.orchestrator import ChatOrchestrator
 
@@ -23,8 +22,8 @@ async def chat(
     request: ChatRequest,
     db: MetadataDB = Depends(get_metadata_db),
     vs: VectorStore = Depends(get_vector_store),
-    llm: LLMProvider = Depends(get_llm),
-    embedding: QwenEmbedding = Depends(get_embedding),
+    llm = Depends(get_llm),
+    embedding = Depends(get_embedding),
 ):
     """发送对话消息，获取 RAG 回复"""
     retriever = Retriever(vector_store=vs, embedding_provider=embedding)

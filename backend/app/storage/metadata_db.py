@@ -122,8 +122,13 @@ class MetadataDB:
                 "error": log.error,
             }
 
-    def save_message(self, knowledge_id: str, role: str, content: str) -> str:
+    def save_message(self, knowledge_id: str, role: str, content: str) -> str | None:
+        """保存对话消息（知识库不存在时静默跳过）"""
         with self.session() as db:
+            # 检查 knowledge 是否存在
+            k = db.query(Knowledge).filter(Knowledge.id == knowledge_id).first()
+            if not k:
+                return None
             msg = ChatMessage(
                 id=str(uuid.uuid4()),
                 knowledge_id=knowledge_id,
