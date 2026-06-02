@@ -18,7 +18,13 @@ class MetadataDB:
         if engine:
             self.engine = engine
         else:
-            self.engine = create_engine(settings.postgres_dsn, pool_size=5, max_overflow=10)
+            # 兼容 psycopg 3.x（将 postgresql:// 转为 postgresql+psycopg://）
+            dsn = settings.postgres_dsn
+            if dsn.startswith("postgresql://"):
+                dsn = dsn.replace("postgresql://", "postgresql+psycopg://", 1)
+            elif dsn.startswith("postgresql+psycopg2://"):
+                dsn = dsn.replace("postgresql+psycopg2://", "postgresql+psycopg://", 1)
+            self.engine = create_engine(dsn, pool_size=5, max_overflow=10)
 
         self.SessionLocal = sessionmaker(bind=self.engine)
 
