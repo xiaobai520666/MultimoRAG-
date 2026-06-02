@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "ssh": {
+      "source": "dicklesworthstone/agent_flywheel_clawdbot_skills_and_integrations",
+      "sourceType": "github",
+      "skillPath": "skills/ssh/SKILL.md",
+      "computedHash": "e56ab9f110797fc8c4dffa2ecd396bb6cad70e1bb6066ebe92c8d5cf01ce0858"
+    }
+  }
+}
