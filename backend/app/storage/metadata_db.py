@@ -94,6 +94,9 @@ class MetadataDB:
             k = db.query(Knowledge).filter(Knowledge.id == knowledge_id).first()
             if not k:
                 return False
+            # 级联删除关联记录
+            db.query(IngestionLog).filter(IngestionLog.knowledge_id == knowledge_id).delete()
+            db.query(ChatMessage).filter(ChatMessage.knowledge_id == knowledge_id).delete()
             db.delete(k)
             return True
 

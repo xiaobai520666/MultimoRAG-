@@ -11,6 +11,7 @@ from qdrant_client.models import (
     MatchValue,
 )
 from typing import List
+import uuid as _uuid
 
 from app.core.config import get_settings
 from app.core.models import Chunk, RetrievedChunk
@@ -58,8 +59,9 @@ class VectorStore:
                 continue
 
             points.append(
+                point_id = str(_uuid.uuid4())
                 PointStruct(
-                    id=f"{knowledge_id}_{i}",
+                    id=point_id,
                     vector=vector,
                     payload={
                         "knowledge_id": knowledge_id,
@@ -106,6 +108,11 @@ class VectorStore:
     async def delete_documents(self, knowledge_id: str, document_id: str = None):
         """删除指定文档的向量"""
         name = self._collection_name(knowledge_id)
+
+        # 检查集合是否存在
+        collections = [c.name for c in self.client.get_collections().collections]
+        if name not in collections:
+            return
 
         if document_id:
             # 删除特定文档的向量
