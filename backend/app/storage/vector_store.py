@@ -58,8 +58,8 @@ class VectorStore:
             if not vector:
                 continue
 
+            point_id = str(_uuid.uuid4())
             points.append(
-                point_id = str(_uuid.uuid4())
                 PointStruct(
                     id=point_id,
                     vector=vector,
