@@ -26,6 +26,10 @@ export async function post<T>(path: string, body: any): Promise<T> {
   });
 }
 
+export async function del<T>(path: string): Promise<T> {
+  return request<T>(path, { method: "DELETE" });
+}
+
 export async function uploadFile(file: File, knowledgeId: string) {
   const formData = new FormData();
   formData.append("file", file);

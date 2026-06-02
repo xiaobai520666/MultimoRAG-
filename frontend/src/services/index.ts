@@ -1,4 +1,4 @@
-import { get, post, uploadFile } from "./api";
+import { get, post, del, uploadFile } from "./api";
 import { Knowledge, ChatRequest, ChatResponse } from "./types";
 
 export { uploadFile };
@@ -12,7 +12,7 @@ export async function createKnowledge(name: string, description = "") {
 }
 
 export async function deleteKnowledge(id: string) {
-  return post<{}>(`/knowledge/${id}`, {});
+  return del<{}>(`/knowledge/${id}`);
 }
 
 export async function sendMessage(request: ChatRequest) {

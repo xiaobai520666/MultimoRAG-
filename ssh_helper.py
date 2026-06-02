@@ -26,8 +26,11 @@ def run(host=None, user=None, password=None, cmd="hostname"):
         client.close()
 
 if __name__ == "__main__":
+    import io
     cmd = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else "hostname && uptime"
     ec, out, err = run(cmd=cmd)
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
     print(f"EXIT: {ec}")
     if out:
         print(out)

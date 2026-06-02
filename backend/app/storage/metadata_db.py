@@ -106,9 +106,20 @@ class MetadataDB:
 
     def save_ingestion_log(self, log: dict):
         with self.session() as db:
-            entry = IngestionLog(**log)
-            db.add(entry)
-            db.flush()
+            existing = db.query(IngestionLog).filter(IngestionLog.task_id == log.get("task_id")).first()
+            if existing:
+                # 更新已有记录的字段
+                for key, value in log.items():
+                    if hasattr(existing, key):
+                        setattr(existing, key, value)
+                db.flush()
+            else:
+                # 新建记录
+                if "id" not in log:
+                    log["id"] = log.get("task_id") or str(uuid.uuid4())
+                entry = IngestionLog(**log)
+                db.add(entry)
+                db.flush()
 
     def get_ingestion_status(self, task_id: str) -> dict | None:
         with self.session() as db:
