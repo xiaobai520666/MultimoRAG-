@@ -19,8 +19,12 @@ def api_call(method, path, body=None):
         return {"code": -1, "message": str(e), "data": None}
 
 
-def check(name, code, extra=""):
+def check(name, resp_or_code, extra=""):
     global passed, failed
+    if isinstance(resp_or_code, dict):
+        code = resp_or_code.get("code", -1)
+    else:
+        code = resp_or_code
     if code == 0:
         print(f"  PASS: {name} {extra}")
         passed += 1
@@ -42,11 +46,20 @@ def upload_file(kb_id, filepath):
     with open(filepath, "rb") as f:
         file_content = f.read()
 
-    body_parts = [
-        f"--{boundary}\r\nContent-Disposition: form-data; name=\"knowledge_id\"\r\n\r\n{kb_id}\r\n",
-        f"--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"{os.path.basename(filepath)}\"\r\nContent-Type: text/plain\r\n\r\n",
+    filename = os.path.basename(filepath)
+    body_lines = [
+        f"--{boundary}",
+        f"Content-Disposition: form-data; name=\"knowledge_id\"",
+        "",
+        kb_id,
+        f"--{boundary}",
+        f"Content-Disposition: form-data; name=\"file\"; filename=\"{filename}\"",
+        "Content-Type: text/plain",
+        "",
     ]
-    body = body_parts[0].encode() + file_content + f"\r\n--{boundary}--\r\n".encode()
+    header = "\r\n".join(body_lines).encode() + b"\r\n"
+    footer = f"\r\n--{boundary}--\r\n".encode()
+    body = header + file_content + footer
 
     conn = http.client.HTTPConnection(host, port, timeout=60)
     conn.request(
@@ -56,7 +69,11 @@ def upload_file(kb_id, filepath):
         headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
     )
     resp = conn.getresponse()
-    return json.loads(resp.read())
+    raw = resp.read().decode()
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return {"code": -1, "message": f"Invalid JSON: {raw[:100]}", "data": None}
 
 
 print("======= Local E2E Test =======")
@@ -68,7 +85,7 @@ check("Health", api_call("GET", "/health")["code"])
 # 2. Create KB
 print("2. Create Knowledge Base")
 kb = api_call("POST", "/knowledge", {"name": "Local E2E", "description": "dev test"})
-kb_id = kb.get("data", {}).get("id")
+kb_id = (kb.get("data") or {}).get("id")
 check("Create KB", kb["code"], f"id={kb_id}")
 
 # 3. Upload
@@ -77,7 +94,7 @@ content = "MultimoRAG是多模态RAG问答系统。它支持文本、图片、�
 with open("test_upload.txt", "w", encoding="utf-8") as f:
     f.write(content)
 upload = upload_file(kb_id, "test_upload.txt")
-check("Upload", upload["code"])
+check("Upload", upload)
 
 # 4. Wait
 print("4. Waiting for processing...")
@@ -88,7 +105,8 @@ print("5. RAG Chat")
 chat = api_call("POST", "/chat", {
     "knowledge_id": kb_id, "message": "MultimoRAG是什么？", "history": [],
 })
-check("Chat", chat["code"], chat.get("data", {}).get("reply", "")[:60] or "")
+chat_data = chat.get("data") or {}
+check("Chat", chat["code"], chat_data.get("reply", "")[:60] or "")
 
 # 6. Search
 print("6. Search")

@@ -44,6 +44,22 @@ def create_app() -> FastAPI:
             },
         )
 
+    @app.exception_handler(Exception)
+    async def generic_exception_handler(request, exc: Exception):
+        import traceback
+        logging.error(f"Unhandled exception: {type(exc).__name__}: {exc}")
+        logging.error(traceback.format_exc())
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=200,
+            content={
+                "code": 5001,
+                "data": None,
+                "message": f"内部错误: {type(exc).__name__}: {str(exc)[:200]}",
+                "detail": traceback.format_exc()[:500],
+            },
+        )
+
     # 日志
     logging.basicConfig(
         level=getattr(logging, settings.log_level.upper(), logging.INFO),

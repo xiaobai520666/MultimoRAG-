@@ -9,7 +9,15 @@ async def parse_text(file_path: str) -> str:
     ext = Path(file_path).suffix.lower()
 
     if ext in (".txt", ".md", ".markdown"):
-        with open(file_path, "r", encoding="utf-8") as f:
+        # 尝试多种编码（UTF-8 → GBK → 系统默认）
+        for encoding in ("utf-8", "gbk", "gb2312", "latin-1"):
+            try:
+                with open(file_path, "r", encoding=encoding) as f:
+                    return f.read()
+            except (UnicodeDecodeError, UnicodeError):
+                continue
+        # 最后兜底
+        with open(file_path, "r", encoding="utf-8", errors="replace") as f:
             return f.read()
 
     if ext == ".pdf":

@@ -28,6 +28,12 @@ class VectorStore:
         settings = get_settings()
         if client:
             self.client = client
+        elif settings.qdrant_host in ("", "local"):
+            # 本地模式：使用文件存储，无需 Qdrant 服务
+            import os
+            local_path = os.path.join(settings.upload_dir, "qdrant_data")
+            os.makedirs(local_path, exist_ok=True)
+            self.client = QdrantClient(path=local_path)
         else:
             self.client = QdrantClient(
                 url=f"http://{settings.qdrant_host}:{settings.qdrant_port}",
@@ -88,22 +94,39 @@ class VectorStore:
         if name not in collections:
             return []
 
-        results = self.client.search(
-            collection_name=name,
-            query_vector=query_embedding,
-            limit=top_k,
-        )
-
-        return [
-            RetrievedChunk(
-                chunk_id=hit.id,
-                document_id=hit.payload.get("document_id", ""),
-                text=hit.payload.get("text", ""),
-                metadata=hit.payload or {},
-                score=hit.score,
+        # 兼容 qdrant-client 新旧版本
+        if hasattr(self.client, "query_points"):
+            results = self.client.query_points(
+                collection_name=name,
+                query=query_embedding,
+                limit=top_k,
             )
-            for hit in results
-        ]
+            return [
+                RetrievedChunk(
+                    chunk_id=str(hit.id),
+                    document_id=hit.payload.get("document_id", ""),
+                    text=hit.payload.get("text", ""),
+                    metadata=hit.payload or {},
+                    score=hit.score,
+                )
+                for hit in results.points
+            ]
+        else:
+            results = self.client.search(
+                collection_name=name,
+                query_vector=query_embedding,
+                limit=top_k,
+            )
+            return [
+                RetrievedChunk(
+                    chunk_id=hit.id,
+                    document_id=hit.payload.get("document_id", ""),
+                    text=hit.payload.get("text", ""),
+                    metadata=hit.payload or {},
+                    score=hit.score,
+                )
+                for hit in results
+            ]
 
     async def delete_documents(self, knowledge_id: str, document_id: str = None):
         """删除指定文档的向量"""

@@ -1,7 +1,8 @@
-"""PostgreSQL 元数据管理"""
+"""元数据管理（PostgreSQL / SQLite 双模式）"""
 
 from __future__ import annotations
 import uuid
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from contextlib import contextmanager
@@ -11,20 +12,34 @@ from app.storage.schemas import Base, Knowledge, IngestionLog, ChatMessage
 
 
 class MetadataDB:
-    """PostgreSQL 元数据管理"""
+    """元数据管理 — 自动适配 PostgreSQL 或 SQLite"""
 
     def __init__(self, engine=None):
         settings = get_settings()
         if engine:
             self.engine = engine
         else:
-            # 兼容 psycopg 3.x（将 postgresql:// 转为 postgresql+psycopg://）
             dsn = settings.postgres_dsn
-            if dsn.startswith("postgresql://"):
-                dsn = dsn.replace("postgresql://", "postgresql+psycopg://", 1)
-            elif dsn.startswith("postgresql+psycopg2://"):
-                dsn = dsn.replace("postgresql+psycopg2://", "postgresql+psycopg://", 1)
-            self.engine = create_engine(dsn, pool_size=5, max_overflow=10)
+            if dsn.startswith("sqlite:///"):
+                # SQLite 本地模式（开发用）
+                db_path = dsn.replace("sqlite:///", "")
+                if db_path and not os.path.isabs(db_path):
+                    # 确保目录存在
+                    abs_dir = os.path.abspath(settings.upload_dir)
+                    os.makedirs(abs_dir, exist_ok=True)
+                    db_path = os.path.join(abs_dir, db_path)
+                    dsn = f"sqlite:///{db_path}"
+                self.engine = create_engine(
+                    dsn,
+                    connect_args={"check_same_thread": False},
+                )
+            else:
+                # PostgreSQL（生产 / Docker）
+                if dsn.startswith("postgresql://"):
+                    dsn = dsn.replace("postgresql://", "postgresql+psycopg://", 1)
+                elif dsn.startswith("postgresql+psycopg2://"):
+                    dsn = dsn.replace("postgresql+psycopg2://", "postgresql+psycopg://", 1)
+                self.engine = create_engine(dsn, pool_size=5, max_overflow=10)
 
         self.SessionLocal = sessionmaker(bind=self.engine)
 
